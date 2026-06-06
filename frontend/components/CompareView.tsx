@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { BASE_URL } from "@/lib/api";
 
 interface Session {
   session_id: string;
@@ -76,13 +77,13 @@ export default function CompareView({ onClose }: Props) {
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch("http://localhost:8000/logs");
+        const res = await fetch(`${BASE_URL}/logs`);
         const data = await res.json();
         const ids: string[] = data.sessions || [];
         const summaries = await Promise.all(
           ids.slice(-30).reverse().map(async (id) => {
             try {
-              const r = await fetch(`http://localhost:8000/logs/${id}`);
+              const r = await fetch(`${BASE_URL}/logs/${id}`);
               const d = await r.json();
               return {
                 id,
@@ -108,7 +109,7 @@ export default function CompareView({ onClose }: Props) {
   useEffect(() => {
     if (!leftId) return;
     setLoadingLeft(true);
-    fetch(`http://localhost:8000/logs/${leftId}`)
+    fetch(`${BASE_URL}/logs/${leftId}`)
       .then(r => r.json())
       .then(d => setLeftData(d))
       .finally(() => setLoadingLeft(false));
@@ -117,7 +118,7 @@ export default function CompareView({ onClose }: Props) {
   useEffect(() => {
     if (!rightId) return;
     setLoadingRight(true);
-    fetch(`http://localhost:8000/logs/${rightId}`)
+    fetch(`${BASE_URL}/logs/${rightId}`)
       .then(r => r.json())
       .then(d => setRightData(d))
       .finally(() => setLoadingRight(false));

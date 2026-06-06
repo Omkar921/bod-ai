@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { BASE_URL } from "@/lib/api";
 
 interface SessionSummary {
   session_id: string;
@@ -35,14 +36,14 @@ export default function HistorySidebar({ currentSessionId, onLoad }: Props) {
   async function fetchSessions() {
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:8000/logs");
+      const res = await fetch(`${BASE_URL}/logs`);
       const data = await res.json();
       const ids: string[] = data.sessions || [];
 
       const summaries = await Promise.all(
         ids.slice(-20).reverse().map(async (id) => {
           try {
-            const r = await fetch(`http://localhost:8000/logs/${id}`);
+            const r = await fetch(`${BASE_URL}/logs/${id}`);
             const d = await r.json();
             return {
               session_id: id,
@@ -73,7 +74,7 @@ export default function HistorySidebar({ currentSessionId, onLoad }: Props) {
   async function handleLoad(id: string) {
     setLoadingId(id);
     try {
-      const res = await fetch(`http://localhost:8000/logs/${id}`);
+      const res = await fetch(`${BASE_URL}/logs/${id}`);
       const full = await res.json();
       const summary = sessions.find(s => s.session_id === id);
       if (summary) onLoad({ ...summary, full });
