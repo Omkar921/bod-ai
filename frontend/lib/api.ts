@@ -1,4 +1,14 @@
-﻿export const BASE_URL =
+﻿import {
+  DEMO_MODE,
+  DEMO_SESSIONS,
+  getDemoSession,
+  runDemoHumanComment,
+  runDemoSimulation,
+} from "./demo";
+
+export { DEMO_MODE };
+
+export const BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
 
 export interface SimulationConfig {
@@ -56,6 +66,15 @@ export type StreamEvent =
   | { type: "done";                session_id: string }
   | { type: "error";               agent: string; message: string };
 
+export interface SessionSummary {
+  session_id: string;
+  scenario: string;
+  verdict: string;
+  confidence: number;
+  saved_at: string;
+  full: unknown;
+}
+
 async function consumeSSE(
   response: Response,
   onEvent: (event: StreamEvent) => void,
@@ -96,6 +115,10 @@ export async function streamSimulation(
   config: SimulationConfig,
   onEvent: (event: StreamEvent) => void,
 ): Promise<void> {
+  if (DEMO_MODE) {
+    return runDemoSimulation(scenario, config, onEvent);
+  }
+
   const response = await fetch(`${BASE_URL}/simulate/stream`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -111,6 +134,10 @@ export async function streamHumanComment(
   debateRounds: DebateRound[],
   onEvent: (event: StreamEvent) => void,
 ): Promise<void> {
+  if (DEMO_MODE) {
+    return runDemoHumanComment(comment, onEvent);
+  }
+
   const response = await fetch(`${BASE_URL}/comment/stream`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -122,4 +149,52 @@ export async function streamHumanComment(
     }),
   });
   await consumeSSE(response, onEvent);
+}
+
+export async function fetchSessionLogs(): Promise<SessionSummary[]> {
+  if (DEMO_MODE) {
+    return DEMO_SESSIONS.map((d) => ({
+      session_id: d.session_id,
+      scenario: d.scenario,
+      verdict: d.final_decision.verdict,
+      confidence: d.final_decision.confidence,
+      saved_at: d.saved_at,
+      full: d,
+    }));
+  }
+
+  const res = await fetch(`${BASE_URL}/logs`);
+  const data = await res.json();
+  const ids: string[] = data.sessions || [];
+
+  const summaries = await Promise.all(
+    ids.slice(-20).reverse().map(async (id) => {
+      try {
+        const r = await fetch(`${BASE_URL}/logs/${id}`);
+        const d = await r.json();
+        return {
+          session_id: id,
+          scenario: d.scenario || "Unknown scenario",
+          verdict: d.final_decision?.verdict || "Unknown",
+          confidence: d.final_decision?.confidence || 0,
+          saved_at: d.saved_at || "",
+          full: d,
+        };
+      } catch {
+        return null;
+      }
+    }),
+  );
+
+  return summaries.filter(Boolean) as SessionSummary[];
+}
+
+export async function fetchSessionById(id: string): Promise<unknown | null> {
+  if (DEMO_MODE) {
+    return getDemoSession(id);
+  }
+
+  const res = await fetch(`${BASE_URL}/logs/${id}`);
+  if (!res.ok) return null;
+  return res.json();
 }

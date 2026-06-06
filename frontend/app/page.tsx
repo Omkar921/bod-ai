@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import dynamic from "next/dynamic";
-import { streamSimulation, streamHumanComment, StreamEvent, FinalDecision } from "@/lib/api";
+import { streamSimulation, streamHumanComment, StreamEvent, FinalDecision, DEMO_MODE } from "@/lib/api";
 import ConfidenceMeter from "@/components/ConfidenceMeter";
 import PersonalityBadge from "@/components/PersonalityBadge";
 import ReplayTimeline from "@/components/ReplayTimeline";
@@ -529,7 +529,7 @@ export default function Home() {
         }
       );
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Connection failed. Is the backend running on port 8000?");
+      setError(e instanceof Error ? e.message : "Something went wrong. Please try again.");
       setLoading(false);
     }
   }
@@ -597,7 +597,7 @@ export default function Home() {
               Bod AI
             </div>
             <div style={{ fontSize: 10, color: "rgba(255,255,255,0.45)", letterSpacing: "0.1em" }}>
-              AI BOARDROOM
+              AI BOARDROOM{DEMO_MODE ? " · DEMO" : ""}
             </div>
           </div>
         </div>

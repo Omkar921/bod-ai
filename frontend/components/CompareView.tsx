@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { BASE_URL } from "@/lib/api";
+import { fetchSessionLogs, fetchSessionById } from "@/lib/api";
 
 interface Session {
   session_id: string;
@@ -77,25 +77,14 @@ export default function CompareView({ onClose }: Props) {
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch(`${BASE_URL}/logs`);
-        const data = await res.json();
-        const ids: string[] = data.sessions || [];
-        const summaries = await Promise.all(
-          ids.slice(-30).reverse().map(async (id) => {
-            try {
-              const r = await fetch(`${BASE_URL}/logs/${id}`);
-              const d = await r.json();
-              return {
-                id,
-                scenario: d.scenario || "",
-                verdict: d.final_decision?.verdict || "",
-                confidence: d.final_decision?.confidence || 0,
-                saved_at: d.saved_at || "",
-              };
-            } catch { return null; }
-          })
-        );
-        const valid = summaries.filter(Boolean) as typeof allSessions;
+        const summaries = await fetchSessionLogs();
+        const valid = summaries.map((d) => ({
+          id: d.session_id,
+          scenario: d.scenario,
+          verdict: d.verdict,
+          confidence: d.confidence,
+          saved_at: d.saved_at,
+        }));
         setAllSessions(valid);
         if (valid.length >= 2) {
           setLeftId(valid[0].id);
@@ -109,18 +98,16 @@ export default function CompareView({ onClose }: Props) {
   useEffect(() => {
     if (!leftId) return;
     setLoadingLeft(true);
-    fetch(`${BASE_URL}/logs/${leftId}`)
-      .then(r => r.json())
-      .then(d => setLeftData(d))
+    fetchSessionById(leftId)
+      .then(d => setLeftData(d as Session | null))
       .finally(() => setLoadingLeft(false));
   }, [leftId]);
 
   useEffect(() => {
     if (!rightId) return;
     setLoadingRight(true);
-    fetch(`${BASE_URL}/logs/${rightId}`)
-      .then(r => r.json())
-      .then(d => setRightData(d))
+    fetchSessionById(rightId)
+      .then(d => setRightData(d as Session | null))
       .finally(() => setLoadingRight(false));
   }, [rightId]);
 

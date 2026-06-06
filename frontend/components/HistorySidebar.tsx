@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { BASE_URL } from "@/lib/api";
+import { fetchSessionLogs, fetchSessionById } from "@/lib/api";
 
 interface SessionSummary {
   session_id: string;
@@ -36,30 +36,8 @@ export default function HistorySidebar({ currentSessionId, onLoad }: Props) {
   async function fetchSessions() {
     setLoading(true);
     try {
-      const res = await fetch(`${BASE_URL}/logs`);
-      const data = await res.json();
-      const ids: string[] = data.sessions || [];
-
-      const summaries = await Promise.all(
-        ids.slice(-20).reverse().map(async (id) => {
-          try {
-            const r = await fetch(`${BASE_URL}/logs/${id}`);
-            const d = await r.json();
-            return {
-              session_id: id,
-              scenario: d.scenario || "Unknown scenario",
-              verdict: d.final_decision?.verdict || "Unknown",
-              confidence: d.final_decision?.confidence || 0,
-              saved_at: d.saved_at || "",
-              full: d,
-            };
-          } catch {
-            return null;
-          }
-        })
-      );
-
-      setSessions(summaries.filter(Boolean) as SessionSummary[]);
+      const summaries = await fetchSessionLogs();
+      setSessions(summaries);
     } catch (e) {
       console.error("Failed to load sessions", e);
     } finally {
@@ -74,10 +52,9 @@ export default function HistorySidebar({ currentSessionId, onLoad }: Props) {
   async function handleLoad(id: string) {
     setLoadingId(id);
     try {
-      const res = await fetch(`${BASE_URL}/logs/${id}`);
-      const full = await res.json();
+      const full = await fetchSessionById(id);
       const summary = sessions.find(s => s.session_id === id);
-      if (summary) onLoad({ ...summary, full });
+      if (summary && full) onLoad({ ...summary, full });
     } catch (e) {
       console.error("Failed to load session", e);
     } finally {
